@@ -32,7 +32,7 @@ public interface BeanDaoHandler {
             "</foreach>",
             "</script>"})
     @SelectKey(keyProperty = "id", before = false, resultType = Integer.class, statement = "select last_insert_id()")
-    void add(Map<String, Object> map);
+    int add(Map<String, Object> map);
 
     /**
      * 通用的批量插入
@@ -51,7 +51,7 @@ public interface BeanDaoHandler {
             "       </foreach>",
             "</foreach>",
             "</script>"})
-    void addList(Map<String, Object> map);
+    int addList(Map<String, Object> map);
 
     /**
      * 通用的更新
@@ -66,7 +66,7 @@ public interface BeanDaoHandler {
             "        </foreach>",
             "        where `${idName}`=#{idValue}"
             , "</script>"})
-    void update(Map<String, Object> map);
+    int update(Map<String, Object> map);
 
     /**
      * 根据条件选择器来更新
@@ -84,7 +84,7 @@ public interface BeanDaoHandler {
             "               ${wrapper.getSqlSegment()}",
             "        </where>",
             "</script>"})
-    void updateByWrapper(Map<String, Object> map);
+    int updateByWrapper(Map<String, Object> map);
 
     /**
      * 批量选择性更新
@@ -108,7 +108,7 @@ public interface BeanDaoHandler {
             "            </foreach>",
             "        </where>"
             , "</script>"})
-    void batchUpdate(Map<String, Object> map);
+    int batchUpdate(Map<String, Object> map);
 
     /**
      * 通用的删除
@@ -121,7 +121,7 @@ public interface BeanDaoHandler {
             "        WHERE `${idName}` = #{idValue}",
             "</script>"
     })
-    void delete(Map<String, Object> map);
+    int delete(Map<String, Object> map);
 
     /**
      * 通用的查询
@@ -233,5 +233,5 @@ public interface BeanDaoHandler {
             "   </where>",
             "</script>",
     })
-    Integer count(@Param("wrapper") AbstractWrapper<?, ?, ?> wrapper);
+    int count(@Param("wrapper") AbstractWrapper<?, ?, ?> wrapper);
 }

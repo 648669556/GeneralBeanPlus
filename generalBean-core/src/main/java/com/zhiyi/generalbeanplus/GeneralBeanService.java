@@ -74,8 +74,8 @@ public class GeneralBeanService {
         }
     }
 
-    public void add(Object object) {
-        add(object, false);
+    public int add(Object object) {
+        return add(object, false);
     }
 
     /**
@@ -84,7 +84,7 @@ public class GeneralBeanService {
      *
      * @param object 待添加的实体
      */
-    public void add(@NonNull Object object, boolean containNull) {
+    public int add(@NonNull Object object, boolean containNull) {
         MapBuilder mapBuilder = new MapBuilder();
         //获取表信息
         TableInfo tableInfo = TableInfoHelper.getTableInfo(object);
@@ -92,7 +92,7 @@ public class GeneralBeanService {
         Class<?> clazz = object.getClass();
         Field idField = mapBuilder.setTableName(tableName).handleObject(object, containNull);
         Map<String, Object> para = mapBuilder.build();
-        handleDao.add(para);
+        int haveAdd = handleDao.add(para);
         // 设置回Id
         if (idField != null) {
             //获取主键设置方法
@@ -117,6 +117,7 @@ public class GeneralBeanService {
                 e.printStackTrace();
             }
         }
+        return haveAdd;
     }
 
 
@@ -139,17 +140,17 @@ public class GeneralBeanService {
      * @param oList 待添加的实体对象列表
      * @throws Exception
      */
-    public void add(Collection<?> oList, boolean containNull) {
+    public int add(Collection<?> oList, boolean containNull) {
         if (CollectionUtils.isEmpty(oList)) {
-            return;
+            return 0;
         }
         Map<String, Object> para = new MapBuilder()
                 .handleObject(oList, containNull).build();
-        handleDao.addList(para);
+        return handleDao.addList(para);
     }
 
-    public void add(Collection<?> oList) {
-        add(oList, true);
+    public int add(Collection<?> oList) {
+        return add(oList, true);
     }
 
     public boolean isBasicType(Object o) {
@@ -166,7 +167,7 @@ public class GeneralBeanService {
      * @throws SecurityException
      * @throws Exception
      */
-    public void update(Object object, String tableName, String idName, boolean containNull) {
+    public int update(Object object, String tableName, String idName, boolean containNull) {
         if (object == null)
             throw new GeneralBeanException("object不能为空");
         Class<?> clazz = object.getClass();
@@ -181,7 +182,7 @@ public class GeneralBeanService {
                 .setIdName(idName)
                 .handleUpdateObject(object, containNull).build();
         // 设置更新字段
-        handleDao.update(para);
+        return handleDao.update(para);
     }
 
     /**
@@ -192,8 +193,8 @@ public class GeneralBeanService {
      * @param idName 根据idName进行更新 , 即where idName = xxx idName必须为object的一个属性
      * @throws Exception
      */
-    public void update(Object object, String idName) {
-        update(object, null, idName, false);
+    public int update(Object object, String idName) {
+        return update(object, null, idName, false);
     }
 
     /**
@@ -201,29 +202,29 @@ public class GeneralBeanService {
      *
      * @param object
      */
-    public void update(Object object) {
-        update(object, null, null, false);
+    public int update(Object object) {
+        return update(object, null, null, false);
     }
 
-    public void update(Object object, boolean containNull) {
-        update(object, null, null, containNull);
+    public int update(Object object, boolean containNull) {
+        return update(object, null, null, containNull);
     }
 
-    public void update(Object object, AbstractWrapper<?, ?, ?> wrapper) {
+    public int update(Object object, AbstractWrapper<?, ?, ?> wrapper) {
         MapBuilder mapBuilder = new MapBuilder();
         mapBuilder.handleObject(object, false);
-        if(StringUtils.isBlank(wrapper.getSqlSegment())){
+        if (StringUtils.isBlank(wrapper.getSqlSegment())) {
             throw new GeneralBeanException("在更新时，不允许更新条件为空！");
         }
         Map<String, Object> para = mapBuilder.setWrapper(wrapper).build();
-        handleDao.updateByWrapper(para);
+        return handleDao.updateByWrapper(para);
     }
 
     /**
      * 批量选择性更新
      */
-    public void batchUpdate(Collection<?> objectList) {
-        batchUpdate(objectList, false);
+    public int batchUpdate(Collection<?> objectList) {
+        return batchUpdate(objectList, false);
     }
 
     /**
@@ -231,12 +232,12 @@ public class GeneralBeanService {
      *
      * @param objectList
      */
-    public void batchUpdate(Collection<?> objectList, boolean containNull) {
+    public int batchUpdate(Collection<?> objectList, boolean containNull) {
         if (objectList == null || objectList.size() == 0) {
             throw new GeneralBeanException("objectList不能为空");
         }
         Map<String, Object> para = new MapBuilder().handleObjectForBatch(objectList, containNull).build();
-        handleDao.batchUpdate(para);
+        return handleDao.batchUpdate(para);
     }
 
     /**
@@ -247,7 +248,7 @@ public class GeneralBeanService {
      * @param idName    删除条件名称,根据idName进行删除, dName必须为object的一个属性
      * @throws Exception
      */
-    public void delete(@Nullable Object object, String tableName, String idName) {
+    public int delete(@Nullable Object object, String tableName, String idName) {
         if (object == null)
             throw new RuntimeException("object和idName不能为空");
 
@@ -271,18 +272,19 @@ public class GeneralBeanService {
                     .setIdValue(idValue)
                     .setIdName(idName)
                     .build();
-            handleDao.delete(para);
+            return handleDao.delete(para);
         } catch (Exception e) {
             e.printStackTrace();
         }
+        return 0;
     }
 
     /**
      * @param object 待删除实体
      * @throws Exception
      */
-    public void delete(Object object) {
-        delete(object, null, null);
+    public int delete(Object object) {
+        return delete(object, null, null);
     }
 
     /**
@@ -290,8 +292,8 @@ public class GeneralBeanService {
      * @param idName 主键字段名
      * @throws Exception
      */
-    public void delete(Object object, String idName) {
-        delete(object, null, idName);
+    public int delete(Object object, String idName) {
+        return delete(object, null, idName);
     }
 
     /**
@@ -712,7 +714,7 @@ public class GeneralBeanService {
      * @param wrapper
      * @return
      */
-    public Integer count(AbstractWrapper<?, ?, ?> wrapper) {
+    public int count(AbstractWrapper<?, ?, ?> wrapper) {
         return handleDao.count(wrapper);
     }
 
