@@ -212,6 +212,9 @@ public class GeneralBeanService {
     public void update(Object object, AbstractWrapper<?, ?, ?> wrapper) {
         MapBuilder mapBuilder = new MapBuilder();
         mapBuilder.handleObject(object, false);
+        if(StringUtils.isBlank(wrapper.getSqlSegment())){
+            throw new GeneralBeanException("在更新时，不允许更新条件为空！");
+        }
         Map<String, Object> para = mapBuilder.setWrapper(wrapper).build();
         handleDao.updateByWrapper(para);
     }
