@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CompilerConfiguration">
+    <annotationProcessing>
+      <profile default="true" name="Default" enabled="true" />
+      <profile name="Maven default annotation processors profile" enabled="true">
+        <sourceOutputDir name="target/generated-sources/annotations" />
+        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
+        <outputRelativeToContentRoot value="true" />
+        <module name="generalBean-core" />
+        <module name="generalBean-springboot-start" />
+      </profile>
+    </annotationProcessing>
+    <bytecodeTargetLevel>
+      <module name="generalBean-springboot-start-test" target="1.8" />
+      <module name="generalBean-test" target="1.8" />
+    </bytecodeTargetLevel>
+  </component>
+  <component name="JavacSettings">
+    <option name="ADDITIONAL_OPTIONS_OVERRIDE">
+      <module name="generalBean-core" options="-parameters" />
+      <module name="generalBean-springboot-start" options="-parameters" />
+      <module name="generalBean-springboot-start-test" options="-parameters" />
+      <module name="generalBean-test" options="-parameters" />
+    </option>
+  </component>
+</project>
