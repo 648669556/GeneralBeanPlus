@@ -17,7 +17,6 @@
     <modules>
         <module>generalBean-core</module>
         <module>generalBean-springboot-start</module>
-<!--        <module>generalBean-test</module>-->
     </modules>
 
     <properties>
