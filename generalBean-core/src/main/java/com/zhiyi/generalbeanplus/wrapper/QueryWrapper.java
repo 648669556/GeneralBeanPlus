@@ -45,6 +45,11 @@ public class QueryWrapper<T> extends AbstractWrapper<T, String, QueryWrapper<T>>
     }
 
     @Override
+    public String getSqlSegment() {
+        return getExpression().getSqlSegment(false);
+    }
+
+    @Override
     protected String columnSqlInjectFilter(String column) {
         return StringUtils.replaceBlank(column);
     }

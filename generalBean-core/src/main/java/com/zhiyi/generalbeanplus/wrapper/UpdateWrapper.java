@@ -54,6 +54,10 @@ public class UpdateWrapper<T> extends AbstractWrapper<T, String, UpdateWrapper<T
         this.sqlSet = new ArrayList<>();
     }
 
+    @Override
+    public String getSqlSegment() {
+        return getExpression().getSqlSegment(true);
+    }
 
     @Override
     public String getTableName() {
