@@ -2,3 +2,6 @@
 /out/
 /generalBean-springboot-start/target/
 /generalBean-core/target/
+/generalBean-core/generalBean-core.iml
+/generalBean-springboot-start/generalBean-springboot-start.iml
+/GeneralBeanPlus.iml
