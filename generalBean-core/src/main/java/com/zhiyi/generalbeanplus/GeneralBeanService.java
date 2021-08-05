@@ -179,7 +179,7 @@ public class GeneralBeanService {
         MapBuilder mapBuilder = new MapBuilder();
         Map<String, Object> para = mapBuilder.setTableName(tableName)
                 .setProperties(pros)
-                .setIdName(StringUtils.camelToUnderline(idName))
+                .setIdName(idName)
                 .handleUpdateObject(object, containNull).build();
         // 设置更新字段
         return handleDao.update(para);

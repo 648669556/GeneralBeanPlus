@@ -106,7 +106,7 @@ public class MapBuilder {
             para.put("idList", idList);
         }
         if (idName != null) {
-            para.put("idName", idName);
+            para.put("idName", StringUtils.camelToUnderline(idName));
         }
         if (idValue != null) {
             para.put("idValue", idValue);
