@@ -5,10 +5,17 @@
     <parent>
         <artifactId>generalbean-plus</artifactId>
         <groupId>com.zhiyi</groupId>
-        <version>1.0-SNAPSHOT</version>
+        <version>1.0.1-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
-
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-source-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
     <artifactId>generalBean-core</artifactId>
 
     <properties>
