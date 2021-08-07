@@ -5,7 +5,7 @@
     <parent>
         <artifactId>generalbean-plus</artifactId>
         <groupId>com.zhiyi</groupId>
-        <version>1.0.1-SNAPSHOT</version>
+        <version>1.0.2-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
@@ -31,7 +31,7 @@
         <dependency>
             <groupId>com.zhiyi</groupId>
             <artifactId>generalBean-core</artifactId>
-            <version>1.0.1-SNAPSHOT</version>
+            <version>1.0.2-SNAPSHOT</version>
         </dependency>
     </dependencies>
 </project>

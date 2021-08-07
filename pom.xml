@@ -12,7 +12,7 @@
     <groupId>com.zhiyi</groupId>
     <artifactId>generalbean-plus</artifactId>
     <packaging>pom</packaging>
-    <version>1.0.1-SNAPSHOT</version>
+    <version>1.0.2-SNAPSHOT</version>
 
     <modules>
         <module>generalBean-core</module>

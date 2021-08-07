@@ -9,6 +9,7 @@ import com.zhiyi.generalbeanplus.support.MapBuilder;
 import com.zhiyi.generalbeanplus.support.ObjGenerator;
 import com.zhiyi.generalbeanplus.util.StringUtils;
 import com.zhiyi.generalbeanplus.wrapper.AbstractWrapper;
+import com.zhiyi.generalbeanplus.wrapper.Wrapper;
 import lombok.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -616,6 +617,20 @@ public class GeneralBeanService {
         try {
             return query(object, tableName, null, null).getResultList().get(0);
         } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /**
+     * 查询单条数据
+     */
+    public <T> T queryOne(AbstractWrapper<T, ?, ?> wrapper) {
+        List<T> ts = queryList(wrapper);
+        if (ts.size() > 1) {
+            throw new GeneralBeanException("查询单条数据，但是返回值有多条");
+        } else if (ts.size() == 1) {
+            return ts.get(0);
+        } else {
             return null;
         }
     }
