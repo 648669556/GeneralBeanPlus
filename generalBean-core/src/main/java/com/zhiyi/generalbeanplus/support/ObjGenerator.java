@@ -79,8 +79,22 @@ public class ObjGenerator<T> {
                     else
                         method.invoke(targetObj, Boolean.TRUE);
                 } else if (field.getType().toString().contains("Integer")) {
+                    if (value instanceof Boolean) {
+                        if ((Boolean) value) {
+                            value = 1;
+                        } else {
+                            value = 0;
+                        }
+                    }
                     method.invoke(targetObj, Integer.valueOf(String.valueOf(value)));
                 } else if (field.getType().toString().contains("Long")) {
+                    if (value instanceof Boolean) {
+                        if ((Boolean) value) {
+                            value = 1;
+                        } else {
+                            value = 0;
+                        }
+                    }
                     method.invoke(targetObj, Long.valueOf(String.valueOf(value)));
                 } else {
                     if (field.getType().toString().contains("String") && value instanceof Timestamp) {

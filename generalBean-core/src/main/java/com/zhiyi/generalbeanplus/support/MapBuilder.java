@@ -20,6 +20,8 @@ import java.util.*;
  * map 属性参数建造工厂
  */
 public class MapBuilder {
+    private static Set<String> needPass;
+
     private String tableName;
 
     private List<Property> properties;
@@ -208,7 +210,7 @@ public class MapBuilder {
                 if (passFieldsName.contains(fieldName)) {
                     continue;
                 }
-                if (fieldName.equalsIgnoreCase("start") || fieldName.equalsIgnoreCase("limit"))
+                if (needPass.contains(fieldName))
                     continue;
                 if (keyColumnName.equalsIgnoreCase(fieldName)) {
                     //如果为主键
@@ -293,7 +295,7 @@ public class MapBuilder {
             if (passFieldsName.contains(fieldName)) {
                 continue;
             }
-            if (fieldName.equalsIgnoreCase("start") || fieldName.equalsIgnoreCase("limit"))
+            if (needPass.contains(fieldName))
                 continue;
             if (keyColumnName.equalsIgnoreCase(fieldName)) {
                 //跳过id主键的更新
@@ -434,5 +436,7 @@ public class MapBuilder {
         return this;
     }
 
-
+    public static void setNeedPass(List<String> passName) {
+        needPass = new HashSet<>(passName);
+    }
 }
