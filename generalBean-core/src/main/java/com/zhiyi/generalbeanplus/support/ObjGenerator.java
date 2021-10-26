@@ -22,18 +22,14 @@ public class ObjGenerator<T> {
 
     private final Class<T> entityClazz;
 
-    @SuppressWarnings("unchecked")
     public T generatorObj(Map<String, Object> map) {
         T targetObj = null;
         try {
-            targetObj = (T) entityClazz.newInstance();
-        } catch (InstantiationException instantiationException) {
+            targetObj = entityClazz.newInstance();
+        } catch (InstantiationException | IllegalAccessException instantiationException) {
             throw new GeneralBeanException(String.format("%s 对象生成失败", entityClazz.getName()));
-        } catch (IllegalAccessException e) {
-            e.printStackTrace();
         }
         Set<String> keySet = map.keySet();
-        DateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         TableInfo tableInfo = TableInfoHelper.getTableInfoByClazz(entityClazz);
         for (String aKeySet : keySet) {
             Object value = map.get(aKeySet);
@@ -58,7 +54,7 @@ public class ObjGenerator<T> {
             String setMethodName = StringUtils.propertyToSetMethodName(name);
             Method method = null;
             try {
-                method = entityClazz.getDeclaredMethod(setMethodName, field.getType());
+                method = tableInfo.getMethod(setMethodName, field.getType());
             } catch (NoSuchMethodException e) {
                 throw new GeneralBeanException(String.format("方法[%s()]未找到 所属类%s", setMethodName, entityClazz.getName()));
             }
@@ -98,6 +94,7 @@ public class ObjGenerator<T> {
                     method.invoke(targetObj, Long.valueOf(String.valueOf(value)));
                 } else {
                     if (field.getType().toString().contains("String") && value instanceof Timestamp) {
+                        DateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
                         String format = sdf.format(value);
                         method.invoke(targetObj, format);
                     } else {

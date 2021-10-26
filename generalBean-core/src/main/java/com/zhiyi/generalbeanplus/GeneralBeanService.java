@@ -6,10 +6,12 @@ import com.zhiyi.generalbeanplus.metadata.TableInfo;
 import com.zhiyi.generalbeanplus.metadata.TableInfoHelper;
 import com.zhiyi.generalbeanplus.model.PageSet;
 import com.zhiyi.generalbeanplus.model.Property;
+import com.zhiyi.generalbeanplus.support.FieldFilter;
 import com.zhiyi.generalbeanplus.support.MapBuilder;
 import com.zhiyi.generalbeanplus.support.ObjGenerator;
 import com.zhiyi.generalbeanplus.util.StringUtils;
 import com.zhiyi.generalbeanplus.wrapper.AbstractWrapper;
+import com.zhiyi.generalbeanplus.wrapper.QueryWrapper;
 import lombok.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -57,16 +59,15 @@ public class GeneralBeanService {
         Method getMethod;
         try {
             getMethod = clazz.getMethod(getMethodName);
+            getMethod.setAccessible(true);
         } catch (NoSuchMethodException e) {
             throw new GeneralBeanException("未找到 " + getMethodName + " 方法");
         }
         Object value = null;
         try {
             value = getMethod.invoke(object);
-        } catch (IllegalAccessException e) {
+        } catch (IllegalAccessException | InvocationTargetException e) {
             throw new GeneralBeanException(getMethodName + "方法无法访问", e);
-        } catch (InvocationTargetException e) {
-            e.printStackTrace();
         }
         if (value == null) {
             add(object);
@@ -90,7 +91,6 @@ public class GeneralBeanService {
         //获取表信息
         TableInfo tableInfo = TableInfoHelper.getTableInfo(object);
         String tableName = tableInfo.getTableName();
-        Class<?> clazz = object.getClass();
         Field idField = mapBuilder.setTableName(tableName).handleObject(object, containNull);
         Map<String, Object> para = mapBuilder.build();
         int haveAdd = handleDao.add(para);
@@ -100,7 +100,7 @@ public class GeneralBeanService {
             String setMethodName = StringUtils.propertyToSetMethodName(tableInfo.getKeyColumnName());
             Method setMethod = null;
             try {
-                setMethod = clazz.getMethod(setMethodName, idField.getType());
+                setMethod = tableInfo.getMethod(setMethodName, idField.getType());
             } catch (NoSuchMethodException e) {
                 throw new GeneralBeanException("找不到" + setMethodName + "方法");
             }
@@ -112,10 +112,8 @@ public class GeneralBeanService {
                     // long主键
                     setMethod.invoke(object, ((Integer) para.get("id")).longValue());
                 }
-            } catch (IllegalAccessException e) {
+            } catch (IllegalAccessException | InvocationTargetException e) {
                 throw new GeneralBeanException("无法访问" + setMethodName + "方法");
-            } catch (InvocationTargetException e) {
-                e.printStackTrace();
             }
         }
         return haveAdd;
@@ -141,17 +139,21 @@ public class GeneralBeanService {
      * @param oList 待添加的实体对象列表
      * @throws Exception
      */
-    public int add(Collection<?> oList, boolean containNull) {
+    public int add(Collection<?> oList, boolean containNull, FieldFilter<?> fieldFilter) {
         if (CollectionUtils.isEmpty(oList)) {
             return 0;
         }
         Map<String, Object> para = new MapBuilder()
-                .handleObject(oList, containNull).build();
+                .handleObject(oList, containNull, fieldFilter).build();
         return handleDao.addList(para);
     }
 
+    public int add(Collection<?> oList, boolean containNull) {
+        return add(oList, containNull, null);
+    }
+
     public int add(Collection<?> oList) {
-        return add(oList, true);
+        return add(oList, true, null);
     }
 
     public boolean isBasicType(Object o) {
@@ -167,7 +169,11 @@ public class GeneralBeanService {
      * @param idName    根据idName进行更新 , 即where idName = xxx idName必须为object的一个属性
      * @throws SecurityException
      * @throws Exception
+     * 使用
+     * @see GeneralBeanService#update(java.lang.Object, com.zhiyi.generalbeanplus.wrapper.AbstractWrapper, boolean)
+     * 代替
      */
+    @Deprecated
     public int update(Object object, String tableName, String idName, boolean containNull) {
         if (object == null)
             throw new GeneralBeanException("object不能为空");
@@ -193,7 +199,12 @@ public class GeneralBeanService {
      * @param object 待更新的实体
      * @param idName 根据idName进行更新 , 即where idName = xxx idName必须为object的一个属性
      * @throws Exception
+     * 使用
+     * @see com.zhiyi.generalbeanplus.GeneralBeanService#update(java.lang.Object, com.zhiyi.generalbeanplus.wrapper.AbstractWrapper)
+     * 代替
+     *
      */
+    @Deprecated
     public int update(Object object, String idName) {
         return update(object, null, idName, false);
     }
@@ -212,8 +223,12 @@ public class GeneralBeanService {
     }
 
     public int update(Object object, AbstractWrapper<?, ?, ?> wrapper) {
+        return update(object,wrapper,false);
+    }
+
+    public int update(Object object,AbstractWrapper<?,?,?> wrapper ,boolean containNull){
         MapBuilder mapBuilder = new MapBuilder();
-        mapBuilder.handleObject(object, false);
+        mapBuilder.handleObject(object, containNull);
         if (StringUtils.isBlank(wrapper.getSqlSegment())) {
             throw new GeneralBeanException("在更新时，不允许更新条件为空！");
         }
@@ -225,19 +240,26 @@ public class GeneralBeanService {
      * 批量选择性更新
      */
     public int batchUpdate(Collection<?> objectList) {
-        return batchUpdate(objectList, false);
+        return batchUpdate(objectList, false, null);
     }
 
     /**
-     * 全量更新，即使属性为null
+     * 批量选择性更新
+     */
+    public int batchUpdate(Collection<?> objectList, boolean containNull) {
+        return batchUpdate(objectList, containNull, null);
+    }
+
+    /**
+     * 批量更新
      *
      * @param objectList
      */
-    public int batchUpdate(Collection<?> objectList, boolean containNull) {
+    public int batchUpdate(Collection<?> objectList, boolean containNull, FieldFilter<?> fieldFilter) {
         if (objectList == null || objectList.size() == 0) {
             throw new GeneralBeanException("objectList不能为空");
         }
-        Map<String, Object> para = new MapBuilder().handleObjectForBatch(objectList, containNull).build();
+        Map<String, Object> para = new MapBuilder().handleObjectForBatch(objectList, containNull, fieldFilter).build();
         return handleDao.batchUpdate(para);
     }
 
@@ -252,7 +274,6 @@ public class GeneralBeanService {
     public int delete(@Nullable Object object, String tableName, String idName) {
         if (object == null)
             throw new RuntimeException("object和idName不能为空");
-
         TableInfo tableInfo = TableInfoHelper.getTableInfo(object);
         // 表名为空,按照默认规则生成表名
         if (StringUtils.isEmpty(tableName)) {
@@ -267,6 +288,7 @@ public class GeneralBeanService {
             String name = field.getName();
             String getMethodName = StringUtils.propertyToGetMethodName(name);
             Method getMethod = clazz.getMethod(getMethodName);
+            getMethod.setAccessible(true);
             Object idValue = getMethod.invoke(object);
             Map<String, Object> para = new MapBuilder()
                     .setTableName(tableName)
@@ -274,10 +296,9 @@ public class GeneralBeanService {
                     .setIdName(idName)
                     .build();
             return handleDao.delete(para);
-        } catch (Exception e) {
-            e.printStackTrace();
+        } catch (NoSuchFieldException | InvocationTargetException | NoSuchMethodException | IllegalAccessException e) {
+            throw new GeneralBeanException("对象方法获取失败");
         }
-        return 0;
     }
 
     /**
@@ -316,8 +337,7 @@ public class GeneralBeanService {
 
             delete(object, null, name);
         } catch (InstantiationException | IllegalAccessException | NoSuchFieldException | SecurityException | NoSuchMethodException | IllegalArgumentException | InvocationTargetException e) {
-            e.printStackTrace();
-            throw new RuntimeException(e.getLocalizedMessage());
+            throw new GeneralBeanException(e.getLocalizedMessage());
         }
     }
 
@@ -401,12 +421,12 @@ public class GeneralBeanService {
                 String firstLetter = name.substring(0, 1).toUpperCase();
                 String getMethodName = "get" + firstLetter + name.substring(1);
                 Method getMethod = clazz.getMethod(getMethodName);
-
+                getMethod.setAccessible(true);
                 Object value = getMethod.invoke(object);
                 if (value == null)
                     continue;
                 String alias = tableInfo.getAlias(name);
-                if (!alias.equals(name)) {
+                if (alias != null) {
                     property.setName(alias);
                 } else {
                     property.setName(StringUtils.camelToUnderline(name));
@@ -434,7 +454,7 @@ public class GeneralBeanService {
             try {
                 resultObject = (T) object.getClass().newInstance();
             } catch (InstantiationException | IllegalAccessException e) {
-                e.printStackTrace();
+                throw new GeneralBeanException("对象生成失败");
             }
 
             resultList.add(resultObject);
@@ -466,7 +486,6 @@ public class GeneralBeanService {
                                 method.invoke(resultObject, o);
                             }
                         }
-
                     }
                     if (field.getType().toString().contains("Boolean")) {
                         if ((int) value == 0)
@@ -486,7 +505,8 @@ public class GeneralBeanService {
                         }
                     }
                 } catch (Exception ignored) {
-                    logger.error(ignored.getMessage());
+//                    logger.error(ignored.getMessage());
+                    throw new GeneralBeanException("query方法报错");
                 }
 
             }
@@ -536,11 +556,27 @@ public class GeneralBeanService {
      * @throws Exception
      */
     public <T> PageSet<T> query(T object) {
-        return query(object, null, null, null);
+        PageSet<T> pageSet = new PageSet<>();
+        int count = count(new QueryWrapper<>(object));
+        if (count == 0) {
+            return pageSet;
+        }
+        List<T> ts = queryList(object);
+        pageSet.setResultList(ts);
+        pageSet.setResultCount(count);
+        return pageSet;
     }
 
-    public <T> PageSet<T> query(T object, PageSet pageSet) {
-        return query(object, null, null, null, pageSet.getStart(), pageSet.getPageSize());
+    public <T> PageSet<T> query(T object, PageSet<T> pageSet) {
+        QueryWrapper<T> wrapper = new QueryWrapper<>(object);
+        int count = count(wrapper);
+        if (count == 0) {
+            return pageSet;
+        }
+        List<T> ts = queryList(wrapper,pageSet);
+        pageSet.setResultList(ts);
+        pageSet.setResultCount(count);
+        return pageSet;
     }
 
     /**
@@ -565,12 +601,13 @@ public class GeneralBeanService {
      */
     @Nullable
     public <T> T queryOne(T object) {
-
-        try {
-            return query(object, null, null, null).getResultList().get(0);
-        } catch (Exception e) {
-            return null;
+        QueryWrapper<T> wrapper = new QueryWrapper<>(object);
+        PageSet<Object> pageSet = new PageSet<>(0, 1);
+        List<T> ts = queryList(wrapper, pageSet);
+        if (ts.size() > 0) {
+            return ts.get(0);
         }
+        return null;
     }
 
     /**
@@ -578,8 +615,14 @@ public class GeneralBeanService {
      *
      * @param object 查询条件
      * @return 查询结果
+     * 使用
+     * @see GeneralBeanService#queryOne(java.lang.Object)
+     * 或者
+     * @see GeneralBeanService#queryOne(com.zhiyi.generalbeanplus.wrapper.AbstractWrapper)
+     * 来代替
      */
     @Nullable
+    @Deprecated
     public <T> T queryOne(T object, String tableName, List<String> likeProperties) {
 
         try {
@@ -595,8 +638,15 @@ public class GeneralBeanService {
      * @param <T>
      * @param object 查询条件
      * @return 单条结果（查不到就null）
+     * <p>
+     * 使用
+     * @see GeneralBeanService#queryOne(java.lang.Object)
+     * 或者
+     * @see GeneralBeanService#queryOne(com.zhiyi.generalbeanplus.wrapper.AbstractWrapper)
+     * 来代替
      */
     @Nullable
+    @Deprecated
     public <T> T queryOne(T object, List<String> likeProperties) {
         try {
             return query(object, null, likeProperties, null).getResultList().get(0);
@@ -610,7 +660,13 @@ public class GeneralBeanService {
      *
      * @param object 查询条件
      * @return 查询结果
+     * 使用
+     * @see GeneralBeanService#queryOne(java.lang.Object)
+     * 或者
+     * @see GeneralBeanService#queryOne(com.zhiyi.generalbeanplus.wrapper.AbstractWrapper)
+     * 来代替
      */
+    @Deprecated
     @Nullable
     public <T> T queryOne(T object, String tableName) {
 
@@ -642,9 +698,14 @@ public class GeneralBeanService {
      * @param name  参数名
      * @param value 参数值
      * @return 单条结果
-     * @throws Exception
+     * @throws Exception 使用
+     * @see GeneralBeanService#queryOne(java.lang.Object)
+     * 或者
+     * @see GeneralBeanService#queryOne(com.zhiyi.generalbeanplus.wrapper.AbstractWrapper)
+     * 来代替
      */
     @Nullable
+    @Deprecated
     public <T> T quickQueryOne(Class<T> clazz, String name, Object value) {
         if (value == null)
             throw new RuntimeException("参数值不能为空");
@@ -671,8 +732,12 @@ public class GeneralBeanService {
      * @param object         查询条件
      * @param likeProperties 相似查询条件
      * @return 结果列表
+     * 使用方法
+     * @see GeneralBeanService#queryList(com.zhiyi.generalbeanplus.wrapper.AbstractWrapper)
+     * 来替代
      */
     @Nullable
+    @Deprecated
     public <T> List<T> queryList(T object, List<String> likeProperties) {
         try {
             return query(object, null, likeProperties, null).getResultList();
@@ -691,12 +756,7 @@ public class GeneralBeanService {
      */
     @Nullable
     public <T> List<T> queryList(T object) {
-        try {
-            return query(object, null, null, null).getResultList();
-        } catch (Exception e) {
-            return null;
-        }
-
+        return queryList(new QueryWrapper<T>(object));
     }
 
     /**
@@ -741,8 +801,13 @@ public class GeneralBeanService {
      * @param name  参数名
      * @param value 参数值
      * @return 结果列表
-     * @throws Exception
+     * @throws Exception 使用
+     * @see GeneralBeanService#queryList(com.zhiyi.generalbeanplus.wrapper.AbstractWrapper)
+     * 或者
+     * @see GeneralBeanService#queryList(java.lang.Object)
+     * 来代替
      */
+    @Deprecated
     @Nullable
     public <T> List<T> quickQueryList(Class<T> clazz, String name, Object value) {
         try {
@@ -756,7 +821,6 @@ public class GeneralBeanService {
 
             return queryList(object);
         } catch (InstantiationException | IllegalAccessException | NoSuchFieldException | SecurityException | NoSuchMethodException | IllegalArgumentException | InvocationTargetException e) {
-            e.printStackTrace();
             return null;
         }
     }
@@ -770,6 +834,7 @@ public class GeneralBeanService {
      * @return 结果列表
      */
     @Nullable
+    @Deprecated
     public <T> List<T> queryListByPara(T object, List<String> userPara) {
         return queryListByPara(object, null, userPara);
     }
@@ -784,11 +849,11 @@ public class GeneralBeanService {
      * @return 结果列表
      */
     @Nullable
+    @Deprecated
     public <T> List<T> queryListByPara(T object, String tableName, List<String> userPara) {
         try {
             return query(object, tableName, null, userPara).getResultList();
         } catch (Exception e) {
-            e.printStackTrace();
             return null;
         }
     }
@@ -802,6 +867,7 @@ public class GeneralBeanService {
      * @param values    多个值
      * @return 查询到的对象列表
      */
+    @Deprecated
     public <T> List<T> queryByMultiValue(Class<T> cls, String tableName, String propName, List values) {
         List<Map<String, Object>> dbRows = handleDao.queryByMultiValue(tableName, propName, values);
 

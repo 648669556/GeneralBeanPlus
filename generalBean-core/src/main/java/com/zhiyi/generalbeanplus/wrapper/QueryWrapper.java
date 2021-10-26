@@ -1,12 +1,19 @@
 package com.zhiyi.generalbeanplus.wrapper;
 
 
+import com.zhiyi.generalbeanplus.exception.GeneralBeanException;
+import com.zhiyi.generalbeanplus.interfaces.SelectColumn;
 import com.zhiyi.generalbeanplus.metadata.TableInfo;
 import com.zhiyi.generalbeanplus.metadata.TableInfoHelper;
 import com.zhiyi.generalbeanplus.segments.MergeSegments;
+import com.zhiyi.generalbeanplus.support.FieldFilter;
 import com.zhiyi.generalbeanplus.util.StringUtils;
 
-import java.util.Optional;
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.math.BigDecimal;
+import java.util.*;
 
 /**
  * Entity 对象封装操作类
@@ -15,10 +22,11 @@ import java.util.Optional;
  * @since 2018-05-25
  */
 @SuppressWarnings("serial")
-public class QueryWrapper<T> extends AbstractWrapper<T, String, QueryWrapper<T>> {
+public class QueryWrapper<T> extends AbstractWrapper<T, String, QueryWrapper<T>> implements SelectColumn {
     public QueryWrapper(T entity) {
         super.setEntity(entity);
         super.initNeed();
+        boxDO(entity);
     }
 
     public QueryWrapper(Class<T> clazz) {
@@ -36,6 +44,34 @@ public class QueryWrapper<T> extends AbstractWrapper<T, String, QueryWrapper<T>>
         super.setEntity(entity);
         super.setEntityClazz(entityClass);
         this.expression = mergeSegments;
+    }
+
+    public QueryWrapper<T> selectFieldFilter(FieldFilter<T> fieldFilter) {
+        this.fieldFilter = fieldFilter;
+        return typedThis;
+    }
+
+    @Override
+    public String getColumn() {
+        if (fieldFilter == null) {
+            return "*";
+        }
+        TableInfo tableInfo = TableInfoHelper.getTableInfoByClazz(super.getEntityClazz());
+        Field[] fields = super.getEntityClazz().getDeclaredFields();
+        Set<String> passFieldsName = tableInfo.getPassFieldsName();
+        List<String> columns = new ArrayList<>();
+        for (Field field : fields) {
+            String fieldName = field.getName();
+            if (passFieldsName.contains(fieldName)) {
+                continue;
+            }
+            if (fieldFilter.test(fieldName)) {
+                continue;
+            }
+            String alias = Optional.ofNullable(tableInfo.getAlias(fieldName)).orElse(fieldName);
+            columns.add(StringUtils.camelToUnderline(alias));
+        }
+        return String.join(",", columns);
     }
 
     @Override
@@ -58,7 +94,7 @@ public class QueryWrapper<T> extends AbstractWrapper<T, String, QueryWrapper<T>>
      * 返回一个支持 lambda 函数写法的 wrapper
      */
     public LambdaQueryWrapper<T> lambda() {
-        return new LambdaQueryWrapper<>(getEntity(), getEntityClazz(), expression);
+        return new LambdaQueryWrapper<>(getEntity(), getEntityClazz(), expression, fieldFilter);
     }
 
     /**
@@ -75,5 +111,47 @@ public class QueryWrapper<T> extends AbstractWrapper<T, String, QueryWrapper<T>>
     @Override
     public void clear() {
         super.clear();
+    }
+
+    private boolean isBasicType(Object o) {
+        return o instanceof String || o instanceof Integer || o instanceof Long || o instanceof Date || o instanceof Double || o instanceof Enum || o instanceof Boolean || o instanceof BigDecimal;
+    }
+
+    /**
+     * 将do类的属性作为eq条件
+     *
+     * @param target
+     */
+    public void boxDO(T target) {
+        Class<?> clazz = target.getClass();
+        TableInfo tableInfo = TableInfoHelper.getTableInfoByClazz(clazz);
+        Field[] fields = clazz.getDeclaredFields();
+        Set<String> passFieldsName = tableInfo.getPassFieldsName();
+        for (Field field : fields) {
+            String fieldName = field.getName();
+            String alias = Optional.ofNullable(tableInfo.getAlias(fieldName)).orElse(fieldName);
+            if (passFieldsName.contains(fieldName)) {
+                continue;
+            }
+            String getMethodName = StringUtils.propertyToGetMethodName(fieldName);
+            Method getMethod = null;
+            try {
+                getMethod = tableInfo.getMethod(getMethodName);
+            } catch (NoSuchMethodException e) {
+                continue;
+            }
+            Object value = null;
+            try {
+                value = getMethod.invoke(target);
+            } catch (IllegalAccessException e) {
+                throw new GeneralBeanException("无法访问" + getMethodName);
+            } catch (InvocationTargetException targetException) {
+                targetException.printStackTrace();
+            }
+            if (value == null || !isBasicType(value)) {
+                continue;
+            }
+            eq(alias, value);
+        }
     }
 }

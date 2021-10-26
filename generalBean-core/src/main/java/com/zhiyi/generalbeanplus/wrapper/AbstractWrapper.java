@@ -7,10 +7,14 @@ import com.zhiyi.generalbeanplus.enums.WrapperKeyword;
 import com.zhiyi.generalbeanplus.interfaces.Compare;
 import com.zhiyi.generalbeanplus.interfaces.Func;
 import com.zhiyi.generalbeanplus.interfaces.Nested;
+import com.zhiyi.generalbeanplus.interfaces.SelectColumn;
+import com.zhiyi.generalbeanplus.metadata.TableInfo;
 import com.zhiyi.generalbeanplus.metadata.TableInfoHelper;
 import com.zhiyi.generalbeanplus.segments.MergeSegments;
+import com.zhiyi.generalbeanplus.support.FieldFilter;
 import com.zhiyi.generalbeanplus.util.*;
 
+import java.lang.reflect.Field;
 import java.math.BigDecimal;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -31,7 +35,7 @@ import static java.util.stream.Collectors.joining;
  */
 @SuppressWarnings({"serial", "unchecked"})
 public abstract class AbstractWrapper<T, R, Children extends AbstractWrapper<T, R, Children>> extends Wrapper<T>
-        implements Compare<Children, R>, Nested<Children, Children>, Func<Children, R> {
+        implements Compare<Children, R>, Nested<Children, Children>, Func<Children, R>, SelectColumn {
     /**
      * 占位符
      */
@@ -45,6 +49,8 @@ public abstract class AbstractWrapper<T, R, Children extends AbstractWrapper<T, 
 
     private Class<T> entityClazz;
 
+    protected FieldFilter<T> fieldFilter;
+
     public Class<T> getEntityClazz() {
         if (entityClazz == null && entity != null) {
             entityClazz = (Class<T>) entity.getClass();
@@ -52,8 +58,15 @@ public abstract class AbstractWrapper<T, R, Children extends AbstractWrapper<T, 
         return entityClazz;
     }
 
+    public void setFieldFilter(FieldFilter<T> fieldFilter){this.fieldFilter = fieldFilter;}
+
     public void setEntityClazz(Class<T> entityClazz) {
         this.entityClazz = entityClazz;
+    }
+
+    @Override
+    public String getColumn() {
+        return "*";
     }
 
     @Override
@@ -127,6 +140,7 @@ public abstract class AbstractWrapper<T, R, Children extends AbstractWrapper<T, 
     public Children or(boolean condition) {
         return maybeDo(condition, () -> appendSqlSegments(OR));
     }
+
 
     @Override
     public Children nested(boolean condition, Consumer<Children> consumer) {
@@ -294,9 +308,9 @@ public abstract class AbstractWrapper<T, R, Children extends AbstractWrapper<T, 
         return () -> {
             String columnName = columnToString(column);
             String aliasName = getAliasName(columnName);
-            if(!aliasName.equals(columnName)){
+            if (!aliasName.equals(columnName)) {
                 return aliasName;
-            }else{
+            } else {
                 return StringUtils.camelToUnderline(columnName);
             }
         };
@@ -313,7 +327,7 @@ public abstract class AbstractWrapper<T, R, Children extends AbstractWrapper<T, 
      * 获取列表别名
      */
     protected String getAliasName(String name) {
-        return Optional.ofNullable(TableInfoHelper.getTableInfoByClazz(getEntityClazz())).map(item -> item.getAlias(name)).orElse(name);
+        return Optional.ofNullable(TableInfoHelper.getTableInfoByClazz(getEntityClazz())).map(item -> Optional.ofNullable(item.getAlias(name)).orElse(name)).orElse(name);
     }
 
     /**
@@ -413,6 +427,7 @@ public abstract class AbstractWrapper<T, R, Children extends AbstractWrapper<T, 
                 () -> formatParam(SqlUtils.concatLike(val, sqlLike))));
     }
 
+
     /**
      * 子类返回一个自己的新对象
      */
@@ -440,6 +455,7 @@ public abstract class AbstractWrapper<T, R, Children extends AbstractWrapper<T, 
     }
 
     public abstract String getTableName();
+
 
     /**
      * 做事函数

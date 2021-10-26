@@ -3,9 +3,12 @@ package com.zhiyi.generalbeanplus.metadata;
 import com.zhiyi.generalbeanplus.annotation.TargetColumnName;
 import com.zhiyi.generalbeanplus.annotation.TargetDBOut;
 import com.zhiyi.generalbeanplus.annotation.TargetKeyColumn;
+import com.zhiyi.generalbeanplus.exception.GeneralBeanException;
 import lombok.Data;
+import lombok.SneakyThrows;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -38,6 +41,8 @@ public class TableInfo {
      * 主键id 默认为 id
      */
     private String keyColumnName = "id";
+
+    private Map<String, Method> methodMap;
 
     public TableInfo(String tableName, Class<?> entityType) {
         this.entityType = entityType;
@@ -83,10 +88,27 @@ public class TableInfo {
     }
 
     public String getAlias(String name) {
-        return getTargetColumnNameMap().getOrDefault(name, name);
+        return getTargetColumnNameMap().get(name);
     }
 
     public String getOriginalName(String name) {
-        return getOriginalColumnNameMap().getOrDefault(name, name);
+        return getOriginalColumnNameMap().getOrDefault(name,name);
+    }
+
+    public Map<String, Method> getMethodMap() {
+        if (methodMap == null) {
+            methodMap = new HashMap<>();
+        }
+        return methodMap;
+    }
+
+    public Method getMethod(String methodName, Class<?>... param) throws NoSuchMethodException {
+        Method method = getMethodMap().get(methodName);
+        if (method == null) {
+            method = entityType.getMethod(methodName, param);
+            method.setAccessible(true);
+            getMethodMap().put(methodName, method);
+        }
+        return method;
     }
 }

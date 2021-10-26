@@ -1,5 +1,7 @@
 package com.zhiyi.generalbeanplus.util;
 
+import com.zhiyi.generalbeanplus.exception.GeneralBeanException;
+
 import java.io.Serializable;
 import java.lang.invoke.SerializedLambda;
 import java.lang.reflect.Method;
@@ -61,7 +63,7 @@ public class LambdaUtils {
                 lambda = (SerializedLambda) method.invoke(fn);
                 CLASS_LAMBDA_CACHE.put(fn.getClass(), lambda);
             } catch (Exception e) {
-                e.printStackTrace();
+                throw new GeneralBeanException("提取方法引用出错");
             }
         }
         return lambda;

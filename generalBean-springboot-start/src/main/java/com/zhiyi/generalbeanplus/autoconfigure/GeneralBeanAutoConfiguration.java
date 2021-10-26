@@ -39,7 +39,6 @@ public class GeneralBeanAutoConfiguration {
     }
 
 
-
     public void beforePrepare() {
         MapBuilder.setNeedPass(generalBeanProperties.getNeedPass());
     }

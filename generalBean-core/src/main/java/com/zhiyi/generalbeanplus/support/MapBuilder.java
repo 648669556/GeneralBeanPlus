@@ -20,16 +20,30 @@ import java.util.*;
  * map 属性参数建造工厂
  */
 public class MapBuilder {
+    /**
+     * 需要被跳过的属性名称
+     * 与pojo 属性 名称一致
+     */
     private static Set<String> needPass;
-
+    /**
+     * 表名
+     */
     private String tableName;
-
+    /**
+     * 属性列表
+     */
     private List<Property> properties;
-
+    /**
+     * id
+     */
     private Integer id;
-
+    /**
+     * id列表
+     */
     private List<Object> idList;
-
+    /**
+     * 批量更新时的属性
+     */
     private List<PropertyList> propertyList;
 
     private Map<String, PropertyList> propertyListMap;
@@ -41,10 +55,6 @@ public class MapBuilder {
     private Object idValue;
 
     private AbstractWrapper<?, ?, ?> wrapper;
-
-    public MapBuilder MapBuilder() {
-        return this;
-    }
 
     public MapBuilder setIdValue(Object value) {
         this.idValue = value;
@@ -108,7 +118,7 @@ public class MapBuilder {
             para.put("idList", idList);
         }
         if (idName != null) {
-            para.put("idName", StringUtils.camelToUnderline(idName));
+            para.put("idName", idName);
         }
         if (idValue != null) {
             para.put("idValue", idValue);
@@ -156,7 +166,7 @@ public class MapBuilder {
             String getMethodName = StringUtils.propertyToGetMethodName(name);
             Method getMethod;
             try {
-                getMethod = clazz.getMethod(getMethodName);
+                getMethod = tableInfo.getMethod(getMethodName);
             } catch (NoSuchMethodException e) {
                 //如果没有找到get方法，则跳过此属性
                 continue;
@@ -164,20 +174,18 @@ public class MapBuilder {
             Object value = null;
             try {
                 value = getMethod.invoke(object);
-            } catch (IllegalAccessException e) {
+            } catch (IllegalAccessException | InvocationTargetException e) {
                 //get方法不是public
                 throw new GeneralBeanException(getMethodName + " 方法无法访问");
-            } catch (InvocationTargetException e) {
-                e.printStackTrace();
             }
             // value为空或者不是基础数据
             if (!containNull && value == null || containNull && value != null && !isBasicType(value))
                 continue;
             String alias = tableInfo.getAlias(name);
-            if (!alias.equals(name)) {
+            if (alias != null) {
                 property.setName(alias);
             } else {
-                property.setName(StringUtils.camelToUnderline(alias));
+                property.setName(StringUtils.camelToUnderline(name));
             }
             property.setValue(value);
             pros.add(property);
@@ -186,7 +194,7 @@ public class MapBuilder {
         return idField;
     }
 
-    public MapBuilder handleObject(Collection<?> objects, boolean containNull) {
+    public MapBuilder handleObject(Collection<?> objects, boolean containNull, FieldFilter<?> fieldFilter) {
         if (objects.isEmpty()) {
             return this;
         }
@@ -216,10 +224,13 @@ public class MapBuilder {
                     //如果为主键
                     continue;
                 }
+                if (fieldFilter != null && fieldFilter.test(fieldName)) {
+                    continue;
+                }
                 String getMethodName = StringUtils.propertyToGetMethodName(fieldName);
                 Method getMethod;
                 try {
-                    getMethod = clazz.getMethod(getMethodName);
+                    getMethod = tableInfo.getMethod(getMethodName);
                 } catch (NoSuchMethodException e) {
                     //如果没有找到get方法，则跳过此属性
                     continue;
@@ -227,11 +238,9 @@ public class MapBuilder {
                 Object value = null;
                 try {
                     value = getMethod.invoke(next);
-                } catch (IllegalAccessException e) {
+                } catch (IllegalAccessException | InvocationTargetException e) {
                     //get方法不是public
                     throw new GeneralBeanException(getMethodName + " 方法无法访问");
-                } catch (InvocationTargetException e) {
-                    e.printStackTrace();
                 }
                 // value为空或者不是基础数据
                 if (!containNull && value == null || value != null && !isBasicType(value))
@@ -241,7 +250,7 @@ public class MapBuilder {
                 if (added) {
                     Property property = new Property();
                     String alias = tableInfo.getAlias(fieldName);
-                    if (!alias.equals(fieldName)) {
+                    if (alias != null) {
                         property.setName(alias);
                     } else {
                         property.setName(StringUtils.camelToUnderline(fieldName));
@@ -254,7 +263,7 @@ public class MapBuilder {
         return this;
     }
 
-    public MapBuilder handleObjectForBatch(Object object, boolean containNull) {
+    public MapBuilder handleObjectForBatch(Object object, boolean containNull, FieldFilter fieldFilter) {
         Class<?> clazz = object.getClass();
         TableInfo tableInfo = TableInfoHelper.getTableInfoByClazz(clazz);
         Field[] fields = clazz.getDeclaredFields();
@@ -270,13 +279,13 @@ public class MapBuilder {
         Method getId;
         String getIdMethodName = StringUtils.propertyToGetMethodName(keyColumnName);
         String keyAlias = tableInfo.getAlias(keyColumnName);
-        if (!keyAlias.equals(keyColumnName)) {
+        if (keyAlias != null) {
             idName = keyAlias;
         } else {
             idName = StringUtils.camelToUnderline(keyColumnName);
         }
         try {
-            getId = clazz.getMethod(getIdMethodName);
+            getId = tableInfo.getMethod(getIdMethodName);
         } catch (NoSuchMethodException e) {
             throw new GeneralBeanException("do类不存在方法" + getIdMethodName);
         }
@@ -284,10 +293,8 @@ public class MapBuilder {
             //获得类的id
             id = Optional.ofNullable(getId.invoke(object)).orElseThrow(() -> new GeneralBeanException("do类id不得为空"));
             getIdList().add(id);
-        } catch (IllegalAccessException e) {
-            throw new RuntimeException("do类" + getIdMethodName + "方法不能访问");
-        } catch (InvocationTargetException e) {
-            e.printStackTrace();
+        } catch (IllegalAccessException | InvocationTargetException e) {
+            throw new GeneralBeanException("do类" + getIdMethodName + "方法不能访问");
         }
         for (Field field : fields) {
             PropertyData propertyData = new PropertyData();
@@ -301,11 +308,15 @@ public class MapBuilder {
                 //跳过id主键的更新
                 continue;
             }
+            if (fieldFilter != null && fieldFilter.test(fieldName)) {
+                //跳过过滤器中的哪些属性
+                continue;
+            }
             String getMethodName = StringUtils.propertyToGetMethodName(fieldName);
             Method getMethod;
             Object value = null;
             try {
-                getMethod = clazz.getMethod(getMethodName);
+                getMethod = tableInfo.getMethod(getMethodName);
             } catch (NoSuchMethodException e) {
                 //跳过没有get方法的属性
                 continue;
@@ -316,14 +327,12 @@ public class MapBuilder {
                 if (!containNull && value == null || value != null && !isBasicType(value)) {
                     continue;
                 }
-            } catch (IllegalAccessException e) {
+            } catch (IllegalAccessException | InvocationTargetException e) {
                 throw new GeneralBeanException("do类" + getMethodName + "方法不能访问");
-            } catch (InvocationTargetException e) {
-                e.printStackTrace();
             }
             String alias = tableInfo.getAlias(fieldName);
             PropertyList list;
-            if (!alias.equals(fieldName)) {
+            if (alias != null) {
                 list = getPropertyListMap().getOrDefault(fieldName, new PropertyList(alias));
             } else {
                 list = getPropertyListMap().getOrDefault(fieldName, new PropertyList(StringUtils.camelToUnderline(fieldName)));
@@ -336,9 +345,9 @@ public class MapBuilder {
         return this;
     }
 
-    public MapBuilder handleObjectForBatch(Collection<?> objects, boolean containNull) {
+    public MapBuilder handleObjectForBatch(Collection<?> objects, boolean containNull, FieldFilter fieldFilter) {
         for (Object object : objects) {
-            handleObjectForBatch(object, containNull);
+            handleObjectForBatch(object, containNull, fieldFilter);
         }
         return this;
     }
@@ -388,7 +397,7 @@ public class MapBuilder {
         TableInfo tableInfo = TableInfoHelper.getTableInfoByClazz(clazz);
         Set<String> passFieldsName = tableInfo.getPassFieldsName();
         if (idName == null) {
-            idName = tableInfo.getAlias(tableInfo.getKeyColumnName());
+            idName = Optional.ofNullable(tableInfo.getAlias(tableInfo.getKeyColumnName())).orElse(tableInfo.getKeyColumnName());
         }
         // 设置更新字段
         for (Field field : fields) {
@@ -400,22 +409,21 @@ public class MapBuilder {
             String getMethodName = StringUtils.propertyToGetMethodName(fieldName);
             Method getMethod = null;
             try {
-                getMethod = clazz.getMethod(getMethodName);
+                getMethod = tableInfo.getMethod(getMethodName);
             } catch (NoSuchMethodException e) {
                 continue;
             }
             Object value = null;
             try {
                 value = getMethod.invoke(object);
-            } catch (IllegalAccessException e) {
+            } catch (IllegalAccessException | InvocationTargetException e) {
                 throw new GeneralBeanException("方法" + getMethodName + "无法访问");
-            } catch (InvocationTargetException e) {
-                e.printStackTrace();
             }
             if (value != null && !isBasicType(value))
                 continue;
             // idName对应的值
-            if (idName.equalsIgnoreCase(tableInfo.getAlias(fieldName))) {
+            String keyAlias = tableInfo.getAlias(fieldName);
+            if (idName.equalsIgnoreCase(Optional.ofNullable(keyAlias).orElse(fieldName))) {
                 if (value == null) {
                     throw new GeneralBeanException(String.format("更新的 (%s) 主键为空,更新失败", fieldName));
                 }
@@ -425,7 +433,7 @@ public class MapBuilder {
             if (!containNull && value == null)
                 continue;
             String alias = tableInfo.getAlias(fieldName);
-            if (!alias.equals(fieldName)) {
+            if (alias != null) {
                 property.setName(alias);
             } else {
                 property.setName(StringUtils.camelToUnderline(fieldName));

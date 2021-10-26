@@ -210,7 +210,7 @@ public interface BeanDaoHandler {
 
     @Select({
             "<script>",
-            "select * from `${wrapper.getTableName()}`",
+            "select ${wrapper.getColumn()} from `${wrapper.getTableName()}`",
             "   <where>",
             "       1 = 1",
             "       AND ${wrapper.getSqlSegment()}",

@@ -10,7 +10,7 @@ public class TableInfoHelper {
     /**
      * 使用 concurrentHashMap 避免多线程问题
      */
-    public static Map<Class<?>, TableInfo> tableInfoMap = new ConcurrentHashMap<>();
+    public static final Map<Class<?>, TableInfo> tableInfoMap = new ConcurrentHashMap<>();
 
     public static TableInfo getTableInfoByClazz(Class<?> clazz) {
         if (clazz == null) {
