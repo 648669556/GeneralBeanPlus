@@ -596,6 +596,10 @@ public final class StringUtils {
         return matcher.replaceAll("");
     }
 
+    public static String replaceSingle(String str) {
+        return str.replaceAll("'", "\\\\'");
+    }
+
     public static boolean isEmpty(CharSequence cs) {
         return cs == null || cs.length() == 0;
     }

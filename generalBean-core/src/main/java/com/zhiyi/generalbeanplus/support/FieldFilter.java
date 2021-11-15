@@ -15,6 +15,13 @@ public class FieldFilter<T> {
         predicate = (e) -> sFunctionSet.contains(e);
     }
 
+    public FieldFilter(boolean include) {
+        this();
+        if (include) {
+            predicate = (e) -> !sFunctionSet.contains(e);
+        }
+    }
+
     public Set<String> getsFunctionSet() {
         return sFunctionSet;
     }

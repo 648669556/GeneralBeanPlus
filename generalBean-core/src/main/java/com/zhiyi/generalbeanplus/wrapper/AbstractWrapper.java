@@ -58,7 +58,9 @@ public abstract class AbstractWrapper<T, R, Children extends AbstractWrapper<T, 
         return entityClazz;
     }
 
-    public void setFieldFilter(FieldFilter<T> fieldFilter){this.fieldFilter = fieldFilter;}
+    public void setFieldFilter(FieldFilter<T> fieldFilter) {
+        this.fieldFilter = fieldFilter;
+    }
 
     public void setEntityClazz(Class<T> entityClazz) {
         this.entityClazz = entityClazz;
@@ -369,7 +371,7 @@ public abstract class AbstractWrapper<T, R, Children extends AbstractWrapper<T, 
         if (param == null) {
             return NULL;
         } else if (param instanceof String) {
-            return SINGLE_QUOTE + param.toString() + SINGLE_QUOTE;
+            return SINGLE_QUOTE + StringUtils.replaceSingle(param.toString()) + SINGLE_QUOTE;
         } else if (param instanceof Integer || param instanceof Long || param instanceof Double || param instanceof BigDecimal) {
             return param.toString();
         } else if (param instanceof Date) {
