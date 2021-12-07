@@ -6,6 +6,7 @@ import com.zhiyi.generalbeanplus.annotation.TargetKeyColumn;
 import com.zhiyi.generalbeanplus.exception.GeneralBeanException;
 import lombok.Data;
 import lombok.SneakyThrows;
+import org.springframework.util.ReflectionUtils;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -42,31 +43,33 @@ public class TableInfo {
      */
     private String keyColumnName = "id";
 
-    private Map<String, Method> methodMap;
-
     public TableInfo(String tableName, Class<?> entityType) {
         this.entityType = entityType;
         this.tableName = tableName;
-        Field[] fields = entityType.getDeclaredFields();
-        for (Field field : fields) {
-            String fieldName = field.getName();
-            if (field.isAnnotationPresent(TargetDBOut.class)) {
-                //如果被跳过了则不接着处理
-                passFieldsName.add(fieldName);
-                continue;
+        Class<?> curClass = entityType;
+        Field[] fields = curClass.getDeclaredFields();
+        do {
+            for (Field field : fields) {
+                String fieldName = field.getName();
+                if (field.isAnnotationPresent(TargetDBOut.class)) {
+                    //如果被跳过了则不接着处理
+                    passFieldsName.add(fieldName);
+                    continue;
+                }
+                if (field.isAnnotationPresent(TargetKeyColumn.class)) {
+                    //如果是主键则设置主键
+                    keyColumnName = fieldName;
+                }
+                if (field.isAnnotationPresent(TargetColumnName.class)) {
+                    //如果有别名
+                    TargetColumnName targetColumnName = field.getAnnotation(TargetColumnName.class);
+                    String alienName = targetColumnName.value();
+                    getTargetColumnNameMap().put(fieldName, alienName);
+                    getOriginalColumnNameMap().put(alienName, fieldName);
+                }
             }
-            if (field.isAnnotationPresent(TargetKeyColumn.class)) {
-                //如果是主键则设置主键
-                keyColumnName = fieldName;
-            }
-            if (field.isAnnotationPresent(TargetColumnName.class)) {
-                //如果有别名
-                TargetColumnName targetColumnName = field.getAnnotation(TargetColumnName.class);
-                String alienName = targetColumnName.value();
-                getTargetColumnNameMap().put(fieldName, alienName);
-                getOriginalColumnNameMap().put(alienName, fieldName);
-            }
-        }
+            curClass = curClass.getSuperclass();
+        } while (curClass != null && curClass != Object.class);
     }
 
     private Map<String, String> getOriginalColumnNameMap() {
@@ -92,23 +95,10 @@ public class TableInfo {
     }
 
     public String getOriginalName(String name) {
-        return getOriginalColumnNameMap().getOrDefault(name,name);
+        return getOriginalColumnNameMap().getOrDefault(name, name);
     }
 
-    public Map<String, Method> getMethodMap() {
-        if (methodMap == null) {
-            methodMap = new HashMap<>();
-        }
-        return methodMap;
-    }
-
-    public Method getMethod(String methodName, Class<?>... param) throws NoSuchMethodException {
-        Method method = getMethodMap().get(methodName);
-        if (method == null) {
-            method = entityType.getMethod(methodName, param);
-            method.setAccessible(true);
-            getMethodMap().put(methodName, method);
-        }
-        return method;
+    public Method getMethod(String methodName, Class<?>... param){
+        return ReflectionUtils.findMethod(entityType, methodName, param);
     }
 }

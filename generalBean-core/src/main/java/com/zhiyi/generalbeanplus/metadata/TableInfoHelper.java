@@ -2,6 +2,8 @@ package com.zhiyi.generalbeanplus.metadata;
 
 import com.zhiyi.generalbeanplus.annotation.TargetTableName;
 import com.zhiyi.generalbeanplus.util.StringUtils;
+import org.springframework.core.annotation.AnnotationUtils;
+import org.springframework.util.ConcurrentReferenceHashMap;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -37,7 +39,7 @@ public class TableInfoHelper {
     }
 
     public static String getTableName(Class<?> clazz) {
-        TargetTableName targetTableName = clazz.getAnnotation(TargetTableName.class);
+        final TargetTableName targetTableName = AnnotationUtils.findAnnotation(clazz, TargetTableName.class);
         if (targetTableName != null) {
             if (!StringUtils.isEmpty(targetTableName.value())) {
                 return targetTableName.value();

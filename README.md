@@ -66,7 +66,7 @@
 <dependency>
     <groupId>com.zhiyi</groupId>
     <artifactId>generalBean-springboot-start</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>1.1.0-SNAPSHOT</version>
 </dependency>
 ```
 
@@ -335,4 +335,32 @@ generalBeanService.batchUpdate(Arrays.asList(user,user2),false);//默认是使�
 #### 根据条件构造器获取数据条数
 
 ![image-20210803145518509](https://myselfd.oss-cn-hangzhou.aliyuncs.com/uPic/image-20210803145518509.png)
+
+
+
+### 1.1.0 版本更新
+
+- 新增了 `FieldFilter` 里面对于过滤条件的快速选择，一般只会使用到 去除filter的属性和保留fitler的属性两种
+
+```java
+ public FieldFilter(boolean include) {
+        this();
+        if (include) {
+            predicate = (e) -> !sFunctionSet.contains(e);
+        }
+    }
+//新增了这样一个 构造函数 可以通过 传入include 来决定是 保留 filter的属性还是去除filter的属性
+```
+
+>  True - 只保留filter里面的属性
+>
+> false - 去除filter里面的属性
+
+如果使用无参数构造函数，则默认为 去除filter里面的属性
+
+- 对于一些关键字进行了特殊处理，代码更加安全了
+- 数据库对应对象现在支持被继承后再去操作了。
+- 在数据库操作时一些特殊属性会被自动跳过了
+  - 有些时候会在do里面放置一个 非常规的数据库属性（当然这是不被推荐使用的），例如一个对象，当无法处理这样的对象时会自动跳过。
+  - 当然如果你在属性里添加了一个常规属性，但它并不存在于数据库表字段中，请使用 `@TargetDBOut`注解注释它,以免导致一些奇怪的错误.
 

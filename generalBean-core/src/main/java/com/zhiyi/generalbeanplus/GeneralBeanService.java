@@ -99,11 +99,8 @@ public class GeneralBeanService {
             //获取主键设置方法
             String setMethodName = StringUtils.propertyToSetMethodName(tableInfo.getKeyColumnName());
             Method setMethod = null;
-            try {
-                setMethod = tableInfo.getMethod(setMethodName, idField.getType());
-            } catch (NoSuchMethodException e) {
-                throw new GeneralBeanException("找不到" + setMethodName + "方法");
-            }
+            setMethod = tableInfo.getMethod(setMethodName, idField.getType());
+            if (setMethod == null) throw new GeneralBeanException("找不到" + setMethodName + "方法");
             try {
                 // int主键
                 try {
@@ -168,8 +165,7 @@ public class GeneralBeanService {
      * @param tableName 表名
      * @param idName    根据idName进行更新 , 即where idName = xxx idName必须为object的一个属性
      * @throws SecurityException
-     * @throws Exception
-     * 使用
+     * @throws Exception         使用
      * @see GeneralBeanService#update(java.lang.Object, com.zhiyi.generalbeanplus.wrapper.AbstractWrapper, boolean)
      * 代替
      */
@@ -198,11 +194,9 @@ public class GeneralBeanService {
      *
      * @param object 待更新的实体
      * @param idName 根据idName进行更新 , 即where idName = xxx idName必须为object的一个属性
-     * @throws Exception
-     * 使用
+     * @throws Exception 使用
      * @see com.zhiyi.generalbeanplus.GeneralBeanService#update(java.lang.Object, com.zhiyi.generalbeanplus.wrapper.AbstractWrapper)
      * 代替
-     *
      */
     @Deprecated
     public int update(Object object, String idName) {
@@ -223,10 +217,10 @@ public class GeneralBeanService {
     }
 
     public int update(Object object, AbstractWrapper<?, ?, ?> wrapper) {
-        return update(object,wrapper,false);
+        return update(object, wrapper, false);
     }
 
-    public int update(Object object,AbstractWrapper<?,?,?> wrapper ,boolean containNull){
+    public int update(Object object, AbstractWrapper<?, ?, ?> wrapper, boolean containNull) {
         MapBuilder mapBuilder = new MapBuilder();
         mapBuilder.handleObject(object, containNull);
         if (StringUtils.isBlank(wrapper.getSqlSegment())) {
@@ -573,7 +567,7 @@ public class GeneralBeanService {
         if (count == 0) {
             return pageSet;
         }
-        List<T> ts = queryList(wrapper,pageSet);
+        List<T> ts = queryList(wrapper, pageSet);
         pageSet.setResultList(ts);
         pageSet.setResultCount(count);
         return pageSet;

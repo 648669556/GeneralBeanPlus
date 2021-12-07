@@ -8,6 +8,7 @@ import com.zhiyi.generalbeanplus.metadata.TableInfoHelper;
 import com.zhiyi.generalbeanplus.segments.MergeSegments;
 import com.zhiyi.generalbeanplus.support.FieldFilter;
 import com.zhiyi.generalbeanplus.util.StringUtils;
+import org.springframework.util.ReflectionUtils;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
@@ -125,21 +126,17 @@ public class QueryWrapper<T> extends AbstractWrapper<T, String, QueryWrapper<T>>
     public void boxDO(T target) {
         Class<?> clazz = target.getClass();
         TableInfo tableInfo = TableInfoHelper.getTableInfoByClazz(clazz);
-        Field[] fields = clazz.getDeclaredFields();
         Set<String> passFieldsName = tableInfo.getPassFieldsName();
-        for (Field field : fields) {
+        ReflectionUtils.doWithFields(clazz, field -> {
             String fieldName = field.getName();
             String alias = Optional.ofNullable(tableInfo.getAlias(fieldName)).orElse(fieldName);
             if (passFieldsName.contains(fieldName)) {
-                continue;
+                return;
             }
             String getMethodName = StringUtils.propertyToGetMethodName(fieldName);
             Method getMethod = null;
-            try {
-                getMethod = tableInfo.getMethod(getMethodName);
-            } catch (NoSuchMethodException e) {
-                continue;
-            }
+            getMethod = tableInfo.getMethod(getMethodName);
+            if (getMethod == null) return;
             Object value = null;
             try {
                 value = getMethod.invoke(target);
@@ -148,10 +145,10 @@ public class QueryWrapper<T> extends AbstractWrapper<T, String, QueryWrapper<T>>
             } catch (InvocationTargetException targetException) {
                 targetException.printStackTrace();
             }
-            if (value == null || !isBasicType(value)) {
-                continue;
+            if (!isBasicType(value)) {
+                return;
             }
             eq(alias, value);
-        }
+        });
     }
 }

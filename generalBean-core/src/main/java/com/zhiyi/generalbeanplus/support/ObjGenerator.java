@@ -4,6 +4,7 @@ import com.zhiyi.generalbeanplus.exception.GeneralBeanException;
 import com.zhiyi.generalbeanplus.metadata.TableInfo;
 import com.zhiyi.generalbeanplus.metadata.TableInfoHelper;
 import com.zhiyi.generalbeanplus.util.StringUtils;
+import org.springframework.util.ReflectionUtils;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
@@ -39,29 +40,26 @@ public class ObjGenerator<T> {
             }
             String originalName = tableInfo.getOriginalName(aKeySet);
             Field field = null;
-            try {
-                if (!originalName.equals(aKeySet)) {
-                    field = entityClazz.getDeclaredField(originalName);
-                } else {
-                    field = entityClazz.getDeclaredField(StringUtils.underlineToCamel(aKeySet));
-                }
-            } catch (NoSuchFieldException e) {
-                //如果没有找到元素则跳过
-                continue;
+            if (!originalName.equals(aKeySet)) {
+                field = ReflectionUtils.findField(entityClazz, originalName);
+            } else {
+                field = ReflectionUtils.findField(entityClazz, StringUtils.underlineToCamel(aKeySet));
             }
+            if (field == null) continue;
 
             String name = field.getName();
             String setMethodName = StringUtils.propertyToSetMethodName(name);
             Method method = null;
-            try {
-                method = tableInfo.getMethod(setMethodName, field.getType());
-            } catch (NoSuchMethodException e) {
+            method = tableInfo.getMethod(setMethodName, field.getType());
+
+            if (method == null) {
                 throw new GeneralBeanException(String.format("方法[%s()]未找到 所属类%s", setMethodName, entityClazz.getName()));
             }
+
             try {
                 if (field.getType().isEnum()) {
                     // 枚举类型
-                    Object objects[] = field.getType().getEnumConstants();
+                    Object[] objects = field.getType().getEnumConstants();
                     for (Object o : objects) {
                         if (value.toString().equalsIgnoreCase(o.toString())) {
                             method.invoke(targetObj, o);
@@ -101,10 +99,8 @@ public class ObjGenerator<T> {
                         method.invoke(targetObj, value);
                     }
                 }
-            } catch (IllegalAccessException e) {
+            } catch (IllegalAccessException | InvocationTargetException e) {
                 throw new GeneralBeanException("对象映射失败", e);
-            } catch (InvocationTargetException targetException) {
-                targetException.printStackTrace();
             }
         }
         return targetObj;
